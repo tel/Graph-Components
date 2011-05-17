@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   cco_duset *duset = create_duset();
 
   // Prepare a SQL statement to grab fdedges
-  const char *sql = "SELECT left, right FROM fdedges;";
+  const char *sql = "SELECT left, right FROM fdedges WHERE id < 100;";
   sqlite3_stmt *stmt;
   CALL_SQLITE( prepare_v2(db, sql, strlen(sql) + 1, &stmt, NULL) );
 
@@ -40,34 +40,38 @@ int main(int argc, char *argv[]) {
   // Finalize the fdedges statement
   sqlite3_finalize(stmt);
 
-  /* // Prepare a SQL statement to grab foedges */
-  /* sql = "SELECT left, right FROM foedges;"; */
-  /* CALL_SQLITE( prepare_v2(db, sql, strlen(sql) + 1, &stmt, NULL) ); */
+  // Prepare a SQL statement to grab foedges
+  sql = "SELECT left, right FROM foedges WHERE id < 100;";
+  CALL_SQLITE( prepare_v2(db, sql, strlen(sql) + 1, &stmt, NULL) );
 
-  /* do { */
-  /*   // Step the database */
-  /*   res = sqlite3_step(stmt); */
-
-  /*   if (res == SQLITE_ROW) { */
-  /*     // We've got a row */
-  /*     x = sqlite3_column_int(stmt, 0); */
-  /*     y = sqlite3_column_int(stmt, 1); */
-  /*     duset_connect(duset, x, y); */
-  /*   } */
+  do {
+    // Step the database
+    res = sqlite3_step(stmt);
     
-  /* } while (res == SQLITE_ROW); */
+    if (res == SQLITE_ROW) {
+      // We've got a row
+      x = sqlite3_column_int(stmt, 0);
+      y = sqlite3_column_int(stmt, 1);
+      duset_connect(duset, x, y);
+    }
 
-  /* // Finalize the fdedges statement */
-  /* sqlite3_finalize(stmt); */
+  } while (res == SQLITE_ROW);
+
+  // Finalize the fdedges statement
+  sqlite3_finalize(stmt);
 
   fprintf(stderr, "|R| = %i\n", HASH_CNT(hh_roots, duset->roots));
-
+  
   // Find the largest connected component
   struct cco_node *biggest, *current_node, *tmp;
   int max_count = 0;
   int count;
   HASH_ITER(hh_roots, duset->roots, current_node, tmp) {
-    count = count_children(current_node);
+  	if (current_node != NULL) {
+		count = count_children(current_node);
+	} else {
+		count = 0;
+	}
     if (count > max_count) {
       max_count = count;
       biggest = current_node;

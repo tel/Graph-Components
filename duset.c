@@ -4,6 +4,10 @@
 // Create a base disjoint union set. Allocates memory.
 struct cco_duset *create_duset() {
   struct cco_duset *duset = malloc(sizeof(struct cco_duset));
+  if (duset == NULL) {
+    fprintf(stderr, "Memory error: could not allocate for a duset.");
+    exit(1);
+  }
   return duset;
 }
 
@@ -29,6 +33,10 @@ struct cco_node *cco_locate(struct cco_duset *duset, int id) {
   if (node == NULL) {
     // Create a new node, insert it into lookup AND roots
     node = malloc(sizeof(struct cco_node));
+    if (node == NULL) {
+      fprintf(stderr, "Memory error: could not allocate for a duset node.");
+      exit(1);
+    }
     node->id = id;
     node->rank = 0;
     node->children = NULL;
@@ -58,26 +66,14 @@ int cco_delete_child(struct cco_node *node, struct cco_cons **cell_p) {
   }
 }
 
-int cco_count_children_in_list(struct cco_cons *cell, int acc) {
-  if (cell == NULL) {
-    return acc;
-  } else {
-    return 
-      cco_count_children_in_list(cell->next, 
-				 cco_count_children1(cell->node, acc));
-  }
-}
-
-int cco_count_children1(struct cco_node *node, int acc) {
-  if (node->children == NULL) {
-    return acc+1;
-  } else {
-    return cco_count_children_in_list(node->children, 1+acc);
-  }
-}
-
 int count_children(struct cco_node *node) {
-  return cco_count_children1(node, 0);
+  int count = 1;
+  fprintf(stderr, "%i\n", node->id);
+  struct cco_cons *cell = node->children;
+  while (cell != NULL) {
+    count += count_children(cell->node);
+    cell = cell->next;
+  }
 }
 
 void cco_each_cell(struct cco_cons *cell,
@@ -123,6 +119,10 @@ struct cco_node *cco_find(struct cco_node *node) {
       cco_delete_child(node, &curr_parent->children);
       // Prepend to the new parent's children list
       struct cco_cons *new_children = malloc(sizeof(struct cco_cons));
+      if (new_children == NULL) {
+	fprintf(stderr, "Memory error: could not allocate a new child ll-cell.");
+	exit(1);
+      }
       new_children->next = new_parent->children;
       new_children->node = node;
       new_parent->children = new_children;
@@ -146,6 +146,10 @@ void cco_merge(struct cco_duset *duset,
     // Put y_head beneath x_head
     y_head->parent = x_head; // parent
     struct cco_cons *new_children = malloc(sizeof(struct cco_cons));
+    if (new_children == NULL) {
+      fprintf(stderr, "Memory error: could not allocate a new child ll-cell during merge.");
+      exit(1);
+    }
     new_children->next = x_head->children;
     new_children->node = y_head;
     x_head->children = new_children; //child
@@ -155,6 +159,10 @@ void cco_merge(struct cco_duset *duset,
     // Put x_head beneath y_head
     x_head->parent = y_head; // parent
     struct cco_cons *new_children = malloc(sizeof(struct cco_cons));
+    if (new_children == NULL) {
+      fprintf(stderr, "Memory error: could not allocate a new child ll-cell during merge.");
+      exit(1);
+    }
     new_children->next = y_head->children;
     new_children->node = x_head;
     y_head->children = new_children; //child
@@ -178,73 +186,3 @@ void duset_connect(struct cco_duset *duset, int x_id, int y_id) {
   struct cco_node *y = cco_locate(duset, y_id);
   cco_merge(duset, x, y);
 }
-
-int test() { 
-  // Allocate a duset
-  struct cco_duset *duset = create_duset();
-
-  // Insert a node
-  struct cco_node *node1 = cco_locate(duset, 1);
-  assert(HASH_CNT(hh_lookup, duset->lookup) == 1);
-  assert(HASH_CNT(hh_roots, duset->roots) == 1);
-
-  // Find that node without a new insert
-  struct cco_node *node1_2 = cco_locate(duset, 1);
-  assert(HASH_CNT(hh_lookup, duset->lookup) == 1);
-  assert(HASH_CNT(hh_roots, duset->roots) == 1);
-  
-  // They are the same node, right?
-  assert(node1 == node1_2);
-
-  /* // Insert another node, increase the count  */
-  struct cco_node *node2 = cco_locate(duset, 2);
-
-  // Ensure the count increased
-  assert(HASH_CNT(hh_lookup, duset->lookup) == 2);
-  assert(HASH_CNT(hh_roots, duset->roots) == 2);
-
-  // Build a list
-  struct cco_cons *cons1 = malloc(sizeof(struct cco_cons));
-  cons1->node = node1;
-  struct cco_cons *cons2 = malloc(sizeof(struct cco_cons));
-  cons2->node = node2;
-  cons1->next = cons2;
-
-  // Test deletion
-  cco_delete_child(node1, &cons1);
-  assert(cons1->node == node2);
-
-  free(cons1);
-
-  // Test a merger
-  cco_merge(duset, node1, node2);
-  assert(node1->parent == node2 || node2->parent == node1);
-  assert(node1->rank == 1 || node2->rank == 1);
-  assert(node1->children != NULL ? node1->children->node == node2 : 1);
-  assert(node2->children != NULL ? node2->children->node == node1 : 1);
-
-  // Free the duset
-  free_duset(duset);
-
-  return 0;
-}
-
-void test1() {
-  cco_duset *duset = create_duset();
-  duset_connect(duset, 1, 2);
-  duset_connect(duset, 2, 3);
-  duset_connect(duset, 3, 4);
-  duset_connect(duset, 4, 5);
-  duset_connect(duset, 5, 6);
-  duset_connect(duset, 6, 7);
-  duset_connect(duset, 10, 20);
-  duset_connect(duset, 11, 21);
-  duset_connect(duset, 21, 7);
-  fprintf(stdout, "|R| = %i\n", HASH_CNT(hh_roots, duset->roots));
-  free_duset(duset);
-}
-
-/* int main() { */
-/*   test1(); */
-/*   return 0; */
-/* } */
