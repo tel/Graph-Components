@@ -4,6 +4,12 @@ void print_id(struct cco_node *node) {
   fprintf(stdout, "%i\n", node->id);
 }
 
+void sql_lookup(struct cco_node *node) {
+  fprintf(stdout, "SELECT nodes.t0*80, (nodes.tf - nodes.t0)*80, documents.filename \
+ FROM nodes, documents	    \
+ WHERE nodes.id = %i AND nodes.document_id = documents.id;\n", node->id);
+}
+
 int main(int argc, char *argv[]) {
 
   if (argc != 2) {
@@ -19,7 +25,7 @@ int main(int argc, char *argv[]) {
   cco_duset *duset = create_duset();
 
   // Prepare a SQL statement to grab fdedges
-  const char *sql = "SELECT left, right FROM fdedges WHERE id < 100;";
+  const char *sql = "SELECT left, right FROM fdedges;";
   sqlite3_stmt *stmt;
   CALL_SQLITE( prepare_v2(db, sql, strlen(sql) + 1, &stmt, NULL) );
 
@@ -41,7 +47,7 @@ int main(int argc, char *argv[]) {
   sqlite3_finalize(stmt);
 
   // Prepare a SQL statement to grab foedges
-  sql = "SELECT left, right FROM foedges WHERE id < 100;";
+  sql = "SELECT left, right FROM foedges;";
   CALL_SQLITE( prepare_v2(db, sql, strlen(sql) + 1, &stmt, NULL) );
 
   do {
@@ -60,27 +66,42 @@ int main(int argc, char *argv[]) {
   // Finalize the fdedges statement
   sqlite3_finalize(stmt);
 
-  fprintf(stderr, "|R| = %i\n", HASH_CNT(hh_roots, duset->roots));
+
   
   // Find the largest connected component
   struct cco_node *biggest, *current_node, *tmp;
-  int max_count = 0;
-  int count;
+  count_t max_count = 0;
+  count_t count = 0;
+
+  HASH_ITER(hh_lookup, duset->lookup, current_node, tmp) {
+    count += 1;
+  }
+
+  fprintf(stderr, "Seen nodes: %lld\n", count);
+
+  count = 0;
   HASH_ITER(hh_roots, duset->roots, current_node, tmp) {
-  	if (current_node != NULL) {
-		count = count_children(current_node);
-	} else {
-		count = 0;
-	}
+    count += 1;
+  }
+
+  fprintf(stderr, "Root nodes: %lld\n", count);
+
+  HASH_ITER(hh_roots, duset->roots, current_node, tmp) {
+    count = count_children(current_node) + 1;
     if (count > max_count) {
       max_count = count;
       biggest = current_node;
     }
+    /* if (count > 30) { */
+    /*   fprintf(stdout, "\n\n%i\n=====\n", current_node->id); */
+    /*   each_child(current_node, sql_lookup); */
+    /* } */
+    fprintf(stdout, "%lld\n", count);
   }
 
-  fprintf(stderr, "Biggest cluster: %i\n", max_count);
+  /* fprintf(stderr, "Biggest cluster: %lld \n", max_count); */
 
-  each_child(biggest, print_id);
+  /* each_child(biggest, sql_lookup); */
 
   // Destroy the duset
   free_duset(duset);

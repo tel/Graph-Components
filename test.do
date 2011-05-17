@@ -1,2 +1,5 @@
-redo-ifchange test_duset
-./test_duset
+redo-ifchange duset.test
+
+
+
+./*.test
