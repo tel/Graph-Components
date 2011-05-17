@@ -49,6 +49,17 @@ struct cco_node *cco_locate(struct cco_duset *duset, int id) {
   return node;
 }
 
+struct cco_cons *cco_make_cons(struct cco_node *node, struct cco_cons *cell) {
+  struct cco_cons *new_cell = malloc(sizeof(struct cco_cons));
+  if (new_cell == NULL) {
+    fprintf(stderr, "Memory error: could not allocate a new child ll-cell.");
+    exit(1);
+  }
+  new_cell->node = node;
+  new_cell->next = cell;
+  return new_cell;
+}
+
 int cco_delete_child(struct cco_node *node, struct cco_cons **cell_p) {
   // Get the cell pointer cell_p points to
   struct cco_cons *cell = *cell_p;
@@ -56,6 +67,7 @@ int cco_delete_child(struct cco_node *node, struct cco_cons **cell_p) {
     if (cell->node == node) {
       // If the head is to be deleted, then just shift the pointer forward
       *cell_p = cell->next;
+      free(cell);
     } else {
       cco_delete_child(node, &cell->next);
     }
@@ -97,6 +109,18 @@ void each_child(struct cco_node *node,
   }
 }
 
+// Consistency ensuring operation! We have to make sure that the
+// child's old parent no longer claims it.
+void cco_adopt_child(struct cco_node *parent, struct cco_node *child) {
+  struct cco_node *old_parent = child->parent;
+  if (old_parent != parent) {
+    // We'll need to perform an adoption
+    cco_delete_child(child, &(old_parent->children));
+    parent->children = cco_make_cons(child, parent->children);
+    child->parent = parent;
+  }
+}
+
 // Traverse upward to find the root of a particular node
 struct cco_node *cco_find(struct cco_node *node) {
   struct cco_node *curr_parent, *new_parent;
@@ -108,31 +132,13 @@ struct cco_node *cco_find(struct cco_node *node) {
     // 1. Recurse upward to find the new parent
     new_parent = cco_find(node->parent);
 
-    // 2. Compress the path for further lookups
-    node->parent = new_parent;
-
-    // 3. Remove this node from the old parent's children
+    // 2. Compress the node
     //    (Only needs to happen when this node isn't a root and isn't
     //     already compressed.)
     if (curr_parent != new_parent) {
-      // Delete this node from the old parent's children
-      cco_delete_child(node, &curr_parent->children);
-      // Prepend to the new parent's children list
-      struct cco_cons *new_children = malloc(sizeof(struct cco_cons));
-      if (new_children == NULL) {
-	fprintf(stderr, "Memory error: could not allocate a new child ll-cell.");
-	exit(1);
-      }
-      new_children->next = new_parent->children;
-      new_children->node = node;
-      new_parent->children = new_children;
+      cco_adopt_child(new_parent, node)
     }
-
-  } else {
-    // This is a root node, so the link is cyclic!
-    new_parent = curr_parent;
   }
-
   return curr_parent;
 }
 
@@ -144,28 +150,12 @@ void cco_merge(struct cco_duset *duset,
   struct cco_node *y_head = cco_find(y);
   if (x_head->rank > y_head->rank) {
     // Put y_head beneath x_head
-    y_head->parent = x_head; // parent
-    struct cco_cons *new_children = malloc(sizeof(struct cco_cons));
-    if (new_children == NULL) {
-      fprintf(stderr, "Memory error: could not allocate a new child ll-cell during merge.");
-      exit(1);
-    }
-    new_children->next = x_head->children;
-    new_children->node = y_head;
-    x_head->children = new_children; //child
+    cco_adopt_child(x_head, y_head)
     // Delete y_head from roots
     HASH_DELETE(hh_roots, duset->roots, y_head);
   } else { 
     // Put x_head beneath y_head
-    x_head->parent = y_head; // parent
-    struct cco_cons *new_children = malloc(sizeof(struct cco_cons));
-    if (new_children == NULL) {
-      fprintf(stderr, "Memory error: could not allocate a new child ll-cell during merge.");
-      exit(1);
-    }
-    new_children->next = y_head->children;
-    new_children->node = x_head;
-    y_head->children = new_children; //child
+    cco_adopt_child(y_head, x_head)
     // Delete x_head from roots
     HASH_DELETE(hh_roots, duset->roots, x_head);
     // If they were equal sized before, now y_head is larger
