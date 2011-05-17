@@ -5,3 +5,5 @@ duset
 exp0.db
 *.so
 *.o
+test_*
+!test_*.c
