@@ -1,13 +1,36 @@
 #include "components.h"
 
+sqlite3 *db;
+
 void print_id(struct cco_node *node) {
   fprintf(stdout, "%i\n", node->id);
 }
 
 void sql_lookup(struct cco_node *node) {
-  fprintf(stdout, "SELECT nodes.t0*80, (nodes.tf - nodes.t0)*80, documents.filename \
- FROM nodes, documents	    \
- WHERE nodes.id = %i AND nodes.document_id = documents.id;\n", node->id);
+  char *format = "SELECT nodes.t0*80, (nodes.tf - nodes.t0)*80, documents.filename \
+ FROM nodes, documents							\
+ WHERE nodes.id = %i AND nodes.document_id = documents.id;\n";
+  char *sql = malloc(strlen(format) + 10);
+  sprintf(sql, format, node->id);
+
+  sqlite3_stmt *stmt;
+  CALL_SQLITE( prepare_v2(db, sql, strlen(sql) + 1, &stmt, NULL) );
+  free(sql);
+
+  int res = sqlite3_step(stmt);
+  int s0, sf;
+  char *filename = malloc(sizeof(char)*8);
+
+  if (res == SQLITE_ROW) {
+    s0 = sqlite3_column_int(stmt, 0);
+    sf = sqlite3_column_int(stmt, 1);
+    strncpy(filename, (const char *) sqlite3_column_text(stmt, 2), 7);
+  }
+  sqlite3_finalize(stmt);
+
+  fprintf(stdout, "\"|sox %s.sph -p trim %is %is\" \\\n",
+ 	  filename, s0, sf);
+  free(filename);
 }
 
 int main(int argc, char *argv[]) {
@@ -18,7 +41,6 @@ int main(int argc, char *argv[]) {
   }
 
   // Initialize a database connection
-  sqlite3 *db;
   CALL_SQLITE( open(argv[1], &db) );
 
   // Create the initial duset
@@ -65,8 +87,6 @@ int main(int argc, char *argv[]) {
 
   // Finalize the fdedges statement
   sqlite3_finalize(stmt);
-
-
   
   // Find the largest connected component
   struct cco_node *biggest, *current_node, *tmp;
@@ -92,22 +112,23 @@ int main(int argc, char *argv[]) {
       max_count = count;
       biggest = current_node;
     }
-    /* if (count > 30) { */
-    /*   fprintf(stdout, "\n\n%i\n=====\n", current_node->id); */
-    /*   each_child(current_node, sql_lookup); */
-    /* } */
-    fprintf(stdout, "%lld\n", count);
+    if (count > 1000) {
+      fprintf(stdout, "sox --combine sequence \\\n");
+      each_child(current_node, sql_lookup);
+      fprintf(stdout, "~/work/common/keys/%i.wav\n\n", current_node->id);
+    }
+    /* fprintf(stdout, "%lld\n", count); */
   }
 
   /* fprintf(stderr, "Biggest cluster: %lld \n", max_count); */
 
   /* each_child(biggest, sql_lookup); */
 
-  // Destroy the duset
-  free_duset(duset);
-
   // Close the database connection
   sqlite3_close(db);
+
+  // Destroy the duset
+  free_duset(duset);
 
   // End
   return 0;

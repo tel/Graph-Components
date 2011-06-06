@@ -114,7 +114,7 @@ count_t cco_count_roots(struct cco_duset *duset) {
   return cnt; 
 }
 
-count_t cco_count_nodes(struct cco_duset *duset) {
+count_t cco_count_dict(struct cco_duset *duset) {
   count_t cnt = HASH_CNT(hh_lookup, duset->lookup);
   return cnt;
 }
@@ -138,6 +138,27 @@ void each_child(struct cco_node *node,
   if (node->children != NULL) {
     cco_each_cell(node->children, callback);
   }
+}
+
+void cluster_ids(struct cco_node *node, int *out, count_t *id_p) {
+    // Insert this node's id
+    out[*id_p] = node->id;
+    (*id_p)++;
+
+    // Scan the children
+    if (node->children != NULL) {
+        cluster_ids_cellhelper(node->children, out, id_p);
+    }
+}
+
+void cluster_ids_cellhelper(struct cco_cons *cell, int *out, count_t *id_p) {
+    // Descend into this cell
+    cluster_ids(cell->node, out, id_p);
+
+    // Recurse through the list
+    if (cell->next != NULL) {
+        cluster_ids_cellhelper(cell->next, out, id_p);
+    }
 }
 
 // Consistency ensuring operation! We have to make sure that the

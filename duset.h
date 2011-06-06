@@ -34,8 +34,10 @@ struct cco_node *cco_locate(struct cco_duset *duset, int id);
 struct cco_node *cco_find(struct cco_node *node);
 
 // Count the size of the duset
+count_t count_nodes(struct cco_node *node);
+count_t count_children(struct cco_node *node);
 count_t cco_count_roots(struct cco_duset *duset);
-count_t cco_count_nodes(struct cco_duset *duset);
+count_t cco_count_dict(struct cco_duset *duset);
 
 // Create a base disjoint union set. Allocates memory.
 struct cco_duset *create_duset(void);
@@ -55,6 +57,10 @@ count_t count_children(struct cco_node *node);
 // Interface function: map over the children of this node
 void each_child(struct cco_node *node,
 		void (*callback)(struct cco_node *node));
+
+// Predeclare types
+void cluster_ids(struct cco_node *node, int *out, count_t *id_p);
+void cluster_ids_cellhelper(struct cco_cons *cell, int *out, count_t *id_p);
 
 #endif
 #define CCOMP_H

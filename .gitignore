@@ -1,7 +1,12 @@
 a.out
 components
 duset
+make_keys
+merge_posts
+
 .#*
+.DS_Store
+*.swp
 exp0.db
 *.so
 *.o
@@ -11,3 +16,7 @@ exp0.db
 *.lst
 *.list
 *.sql
+*.pyc
+
+keys
+dump
