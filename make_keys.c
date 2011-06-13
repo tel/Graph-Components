@@ -38,13 +38,16 @@ key_interval key_interval_lookup(sqlite3 *db, int id) {
   if (res == SQLITE_ROW) {
     out.t0 = sqlite3_column_int(stmt, 0);
     out.tf = sqlite3_column_int(stmt, 1);
+  } else {
+    out.t0 = 0;
+    out.tf = 0;
   }
   sqlite3_finalize(stmt);
 
   return out;
 }
 
-void print_coverage(sqlite3 *db, cco_duset *foduset, int id) {
+key_interval print_coverage(sqlite3 *db, cco_duset *foduset, int id) {
   struct cco_node *fo_head = cco_locate(foduset, id);
 
   // Get the ids within this cluster
@@ -66,11 +69,18 @@ void print_coverage(sqlite3 *db, cco_duset *foduset, int id) {
     if (maxframe < interval.tf) maxframe = interval.tf;
   }
             
-  fprintf(stdout, "%c%c/%s %lld %lld ", filename[3], filename[4],\
+  fprintf(stdout, "$1/%c%c/%s %lld %lld ", filename[3], filename[4],\
 	  filename, minframe, maxframe-minframe);
-	    
+	 
+  // Output interval
+  key_interval out;
+  out.t0 = minframe;
+  out.tf = maxframe;
+   
   free(ids);
   free(filename);
+
+  return out;
 }
 
 int main(int argc, char *argv[]) {
@@ -148,14 +158,27 @@ int main(int argc, char *argv[]) {
             nfound = 0;
             cluster_ids(current_node, ids, &nfound);
 
+	    // Script to merge the posteriograms
 	    fprintf(stdout, "merge_posts ");
 	    count_t i;
+	    key_interval *ivals = malloc(sizeof(key_interval)*nfound);
    	    for (i = 0; i < nfound; i++) {
 	      fprintf(stdout, "\\\n");
-	      print_coverage(db, foduset, ids[i]);
+	      ivals[i] = print_coverage(db, foduset, ids[i]);
 	    }
-	    fprintf(stdout, "> $1/%i_%i_key.comb.binary \n\n", current_node->id, (int)count);
+	    fprintf(stdout, "> $3/%i_key.comb.binary \n\n", current_node->id);
 
+	    // Print the interval matching info files
+	    fprintf(stdout, "echo \"");
+	    for (i = 0; i < nfound; i++) {
+	      fprintf(stdout, "%i %i ", (int)(ivals[i].tf), (int)(ivals[i].t0));
+	    }
+	    fprintf(stdout, "\n\" > $3/%i_key.intervals \n\n", current_node->id);
+
+	    // Script to merge the sph files
+	    
+	    
+	    free(ivals);
             free(ids);
         }
     }
