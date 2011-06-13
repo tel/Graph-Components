@@ -8,6 +8,10 @@ struct cco_duset *create_duset() {
     fprintf(stderr, "Memory error: could not allocate for a duset.");
     exit(1);
   }
+
+  duset->lookup = NULL;
+  duset->roots = NULL;
+
   return duset;
 }
 
@@ -46,7 +50,11 @@ struct cco_node *cco_locate(struct cco_duset *duset, int id) {
   struct cco_node *node;
 
   // Lookup the id in the hash to see if it exists
-  HASH_FIND(hh_lookup, duset->lookup, &id, sizeof(int), node);
+  if (duset->lookup == NULL) {
+    node = NULL;
+  } else {
+    HASH_FIND(hh_lookup, duset->lookup, &id, sizeof(int), node);
+  }
 
   if (node == NULL) {
     // Create a new node, insert it into lookup AND roots
@@ -223,7 +231,7 @@ void cco_merge(struct cco_duset *duset,
 
 // Interface function: insert an id into the duset
 void duset_insert(struct cco_duset *duset, int id) {
-  struct cco_node *node = cco_locate(duset, id);
+  cco_locate(duset, id);
 }
 
 // Interface function: insert an edge into the duset, merging the ids

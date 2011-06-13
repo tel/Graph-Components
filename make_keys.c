@@ -134,7 +134,6 @@ int main(int argc, char *argv[]) {
 
     // Extract meaningful clusters
     struct cco_node *current_node, *tmp;
-    int cluster_id;
     count_t count = 0;
 
     int *ids;
@@ -145,8 +144,8 @@ int main(int argc, char *argv[]) {
 
             // Get the ids within this cluster
             int n = count_nodes(current_node);
-            int *ids = malloc(sizeof(int)*n);
-            count_t nfound = 0;
+            ids = malloc(sizeof(int)*n);
+            nfound = 0;
             cluster_ids(current_node, ids, &nfound);
 
 	    fprintf(stdout, "merge_posts ");
@@ -167,4 +166,5 @@ int main(int argc, char *argv[]) {
     free_duset(foduset);
     free_duset(fdduset);
 
+    return 0;
 }
