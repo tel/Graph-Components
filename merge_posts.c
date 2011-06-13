@@ -20,7 +20,7 @@ merge_posts [filename f0 n_frames] ... \n\
   FILE *fp;
   const char* filename;
   int frame0, dur;
-  float *data;
+  float *data, *silence;
   for (i = 0; i < N; i++) {
     /* Open/merge loop */
 
@@ -37,11 +37,17 @@ merge_posts [filename f0 n_frames] ... \n\
     }
     
     data = malloc(floatsize*framesize*dur);
+    silence = malloc(floatsize*framesize*20); // 10 silent frames
     
     /* Seek, read, write */
     fseek(fp, framesize*floatsize*frame0, SEEK_SET);
     fread(data, floatsize, dur*framesize, fp);
     fwrite(data, floatsize, dur*framesize, stdout);
+
+    /* Write some silence to prevent overlapped matches */
+    if (i != (N-1)) {
+      fwrite(silence, floatsize, 20*framesize, stdout);
+    }
     
     free(data);
     fclose(fp); // end fopen

@@ -66,7 +66,7 @@ void print_coverage(sqlite3 *db, cco_duset *foduset, int id) {
     if (maxframe < interval.tf) maxframe = interval.tf;
   }
             
-  fprintf(stdout, "%c%c/%s %lld %lld\\\n", filename[3], filename[4],\
+  fprintf(stdout, "%c%c/%s %lld %lld ", filename[3], filename[4],\
 	  filename, minframe, maxframe-minframe);
 	    
   free(ids);
@@ -149,12 +149,13 @@ int main(int argc, char *argv[]) {
             count_t nfound = 0;
             cluster_ids(current_node, ids, &nfound);
 
-	    fprintf(stdout, "merge_posts \\\n");
+	    fprintf(stdout, "merge_posts ");
 	    count_t i;
-	    for (i = 0; i < nfound; i++) {
+   	    for (i = 0; i < nfound; i++) {
+	      fprintf(stdout, "\\\n");
 	      print_coverage(db, foduset, ids[i]);
 	    }
-	    fprintf(stdout, "> %i_key.comb.binary \n\n", current_node->id);
+	    fprintf(stdout, "> $1/%i_%i_key.comb.binary \n\n", current_node->id, (int)count);
 
             free(ids);
         }
