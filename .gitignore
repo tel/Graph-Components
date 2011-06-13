@@ -18,6 +18,9 @@ exp0.db
 *.sql
 *.pyc
 
+.redo
+.do_built*
+core.*
+
 keys
-dump
-report
+dumpreport
