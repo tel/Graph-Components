@@ -166,14 +166,14 @@ int main(int argc, char *argv[]) {
 	      fprintf(stdout, "\\\n");
 	      ivals[i] = print_coverage(db, foduset, ids[i]);
 	    }
-	    fprintf(stdout, "> $3/%i_key.comb.binary \n\n", current_node->id);
+	    fprintf(stdout, "> $2/%i_key.comb.binary \n\n", current_node->id);
 
 	    // Print the interval matching info files
 	    fprintf(stdout, "echo \"");
 	    for (i = 0; i < nfound; i++) {
 	      fprintf(stdout, "%i %i ", (int)(ivals[i].t0), (int)(ivals[i].tf));
 	    }
-	    fprintf(stdout, "\n\" > $3/%i_key.intervals \n\n", current_node->id);
+	    fprintf(stdout, "\n\" > $2/%i_key.intervals \n\n", current_node->id);
 
 	    // Script to merge the sph files
 	    
