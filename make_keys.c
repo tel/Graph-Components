@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 	    // Print the interval matching info files
 	    fprintf(stdout, "echo \"");
 	    for (i = 0; i < nfound; i++) {
-	      fprintf(stdout, "%i %i ", (int)(ivals[i].tf), (int)(ivals[i].t0));
+	      fprintf(stdout, "%i %i ", (int)(ivals[i].t0), (int)(ivals[i].tf));
 	    }
 	    fprintf(stdout, "\n\" > $3/%i_key.intervals \n\n", current_node->id);
 
